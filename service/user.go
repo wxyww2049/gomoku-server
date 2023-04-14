@@ -17,6 +17,7 @@ func (u UserService) Test(aw *app.Wrapper) app.Result {
 	}
 
 	var tuser userReq
+
 	err := aw.Ctx.ShouldBind(&tuser)
 
 	if err != nil {
@@ -24,7 +25,7 @@ func (u UserService) Test(aw *app.Wrapper) app.Result {
 	}
 
 	user := po.User{tuser.ID, tuser.Username, tuser.Credit}
-	
+
 	userDao.SaveUser(&user)
 
 	return aw.Success(user)

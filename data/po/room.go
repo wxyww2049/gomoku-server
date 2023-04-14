@@ -1,9 +1,10 @@
 package po
 
 type Room struct {
-	Id      int         `json:"id"`
-	Msg     []PlayerMsg `json:"msg"`
-	Steps   []Chess     `json:"steps"`
-	Players []Player    `json:"players"`
-	Status  bool        `json:"status"`
+	Id     int         `json:"id"`
+	Msg    []PlayerMsg `json:"msg"`
+	Steps  []Chess     `json:"steps"`
+	Owner  Player      `json:"owner"`
+	Player Player      `json:"player"`
+	Status bool        `json:"status"`
 }
