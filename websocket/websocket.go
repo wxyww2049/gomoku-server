@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
+	"gomoku-server/constants"
 	"gomoku-server/data/dto"
 	"gomoku-server/service"
 	"gopkg.in/olahol/melody.v1"
@@ -31,6 +32,7 @@ func send(s *melody.Session, msg *dto.Message) { //向特定的对话s发送消�
 		logger.Error(err)
 	}
 }
+
 func Connect(s *melody.Session) {
 	id := uuid.NewV4().String()
 	idMap.Store(id, s)
@@ -40,7 +42,9 @@ func Connect(s *melody.Session) {
 	} else {
 		log.Print(id, "连接成功")
 	}
+	GetAllPlayers()
 }
+
 func DisConnect(s *melody.Session) {
 	id, ok := s.Get("Id")
 	fmt.Println(id, ok)
@@ -50,7 +54,9 @@ func DisConnect(s *melody.Session) {
 	service.ExPlayerService.DisConnect(id.(string))
 	idMap.LoadAndDelete(id)
 	fmt.Println(id, "断开连接")
+	GetAllPlayers()
 }
+
 func Receive(s *melody.Session, msgByte []byte) { //收到消息侯的分发
 	msg := &dto.Message{}
 	err := json.Unmarshal(msgByte, msg)
@@ -58,9 +64,10 @@ func Receive(s *melody.Session, msgByte []byte) { //收到消息侯的分发
 		send(s, dto.NewErrMsg(err))
 		return
 	}
-	msgOut, err := json.Marshal(msg.Code)
-	fmt.Println(msg)
-	s.Write(msgOut)
+	switch msg.Code {
+	case constants.GetAllPlayers:
+		GetAllPlayers()
+	}
 }
 
 func Broadcast(msg *dto.Message) { //向所有对话广播消息
@@ -69,6 +76,7 @@ func Broadcast(msg *dto.Message) { //向所有对话广播消息
 		logger.Error(err)
 	}
 }
+
 func send2Pid(id string, msg *dto.Message) {
 	ts, ok := idMap.Load(id)
 	if !ok {

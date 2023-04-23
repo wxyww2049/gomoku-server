@@ -1,6 +1,8 @@
 package test
 
 import (
+	"fmt"
+	"gomoku-server/constants"
 	"gomoku-server/data/po"
 	"testing"
 )
@@ -32,4 +34,22 @@ func TestIt(t *testing.T) {
 	} else {
 		println(name)
 	}
+}
+
+func TestCopy(t *testing.T) {
+
+	myPlayer := &po.Player{
+		Id: "player1",
+	}
+
+	myroom := &po.Room{
+		Player: myPlayer,
+	}
+
+	myPlayer.Id = "player2"
+
+	fmt.Println(myroom.Player.Id)
+}
+func TestMsgCode(t *testing.T) {
+	fmt.Println(constants.ExitRoom)
 }
