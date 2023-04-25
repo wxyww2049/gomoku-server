@@ -10,4 +10,6 @@ const (
 	DisConnect
 	GetAllPlayers
 	GetAllRoom
+	PlayerRename
+	UpdateRoomAndPlayer
 )
