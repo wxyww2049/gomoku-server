@@ -20,7 +20,14 @@ var (
 	idMap  sync.Map
 )
 
+func SendError(pid string, msg string) {
+	send2Pid(pid, &dto.Message{
+		Code: constants.Fail,
+		Data: msg,
+	})
+}
 func SendToRoomPlayer(room *po.Room) {
+	log.Println("返回房间信息")
 	type reMsg struct {
 		Info *po.Player `json:"info"`
 		Room *po.Room   `json:"room"`
@@ -29,10 +36,12 @@ func SendToRoomPlayer(room *po.Room) {
 		Code: constants.UpdateRoomAndPlayer,
 	}
 	if room == nil {
+		log.Println("返回房间信息时，未找到房间")
 		return
 	}
 
 	if room.Owner != nil {
+		log.Println("向房主发送消息")
 		msg.Data = &reMsg{
 			Info: room.Owner,
 			Room: room,
@@ -119,6 +128,10 @@ func Receive(s *melody.Session, msgByte []byte) { //收到消息侯的分发
 		EnterRoom(s, msg)
 	case constants.ExitRoom:
 		ExitRoom(s, msg)
+	case constants.StartGame:
+		StartGame(s, msg)
+	case constants.AddNewChess:
+		AddNewChess(s, msg)
 	}
 }
 
@@ -139,6 +152,7 @@ func send2Pid(id string, msg *dto.Message) {
 	if !ook {
 		logger.Error("ts不是melody.session")
 	}
+	log.Println("向", id, "发送消息", msg)
 	send(s, msg)
 	return
 }

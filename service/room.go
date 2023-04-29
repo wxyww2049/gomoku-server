@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gomoku-server/data/dto"
 	"gomoku-server/data/po"
+	"gomoku-server/pkg/ren"
 	"log"
 )
 
@@ -53,11 +54,12 @@ func (R *RoomService) CreateNewRoom(playerId string, id string, msg *dto.Message
 	} else {
 		r.Name = tDetail.Name
 	}
-
+	r.Winner = 0
 	maRoom[id] = r
 	rooms = append(rooms, r)
 	return r
 }
+
 func (R *RoomService) GetAllRoom() []*po.Room {
 	return rooms
 }
@@ -112,4 +114,80 @@ func (R *RoomService) ExitRoom(playerId string, roomId string) bool {
 		log.Println("没有找到对应房间")
 		return false
 	}
+}
+func (R *RoomService) StartGame(roomId string) (*po.Room, bool) {
+	r := maRoom[roomId]
+	if r.Status == 1 {
+		r.Status = 2
+		r.Steps = nil
+		r.Color = 1 //黑棋先手
+		if r.Winner != 0 {
+			var tmp = r.Owner.Color
+			r.Owner.Color = r.Player.Color
+			r.Player.Color = tmp
+		}
+		r.Winner = 0
+		return r, true
+	} else {
+		return r, false
+	}
+}
+
+func ConvertToBoard(steps *[]po.Chess) ([15][15]int, int, int) {
+	var board [15][15]int
+	var x = 0
+	var y = 0
+	for _, value := range *steps {
+		x = value.I
+		y = value.J
+		if value.Color == 0 {
+			board[value.I][value.J] = -1
+		} else {
+			board[value.I][value.J] = 1
+		}
+	}
+	return board, x, y
+}
+func (R *RoomService) AddNewChess(roomId string, msg *dto.Message) (*po.Room, int, *string) { //int 3为添加成功 0为出现错误 -1游戏结束白色方赢，1为游戏结束黑色方赢
+	r := maRoom[roomId]
+	var tchess po.Chess
+
+	GetMsg(msg, &tchess)
+
+	if r.Color != tchess.Color {
+		remsg := "不是你的回合"
+		return r, 0, &remsg
+	}
+
+	r.Steps = append(r.Steps, tchess)
+
+	board, x, y := ConvertToBoard(&r.Steps)
+	fb := ren.CheckForbid(board, x, y)
+	if fb != 0 {
+		remsg := "禁手"
+		switch fb {
+		case 1:
+			remsg = "三三禁手"
+			break
+		case 2:
+			remsg = "四四禁手"
+			break
+		case 3:
+			remsg = "长连禁手"
+			break
+		default:
+			break
+		}
+		r.Steps = append(r.Steps[:len(r.Steps)-1])
+		return r, 0, &remsg
+	}
+	res := ren.CheckWin(board, x, y)
+	if res != 0 {
+		r.Status = 1
+		r.Winner = res
+		return r, res, nil
+	}
+
+	r.Color = 1 - r.Color
+	return r, 3, nil
 }

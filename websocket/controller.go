@@ -92,3 +92,38 @@ func RenamePlayer(s *melody.Session, msg *dto.Message) {
 	send(s, msg)
 	GetAllRooms()
 }
+func StartGame(s *melody.Session, msg *dto.Message) {
+	log.Println("正在开始游戏")
+	rid, ok := s.Get("rid")
+	if !ok {
+		fmt.Println("开始游戏失败，找不到该房间")
+		return
+	}
+	pid, ok := s.Get("Id")
+	r, ok := service.ExRoomService.StartGame(rid.(string))
+	if ok == false {
+		SendError(pid.(string), "开始游戏失败")
+	} else {
+		SendToRoomPlayer(r)
+		GetAllRooms()
+	}
+}
+func AddNewChess(s *melody.Session, msg *dto.Message) {
+	rid, ok := s.Get("rid")
+	if !ok {
+		fmt.Println("添加棋子失败，找不到该房间")
+		return
+	}
+	pid, _ := s.Get("Id")
+	r, okk, err := service.ExRoomService.AddNewChess(rid.(string), msg)
+
+	if okk == 0 {
+		if err != nil {
+			SendError(pid.(string), *err)
+		} else {
+			SendError(pid.(string), "下棋失败")
+		}
+	} else {
+		SendToRoomPlayer(r)
+	}
+}

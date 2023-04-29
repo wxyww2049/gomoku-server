@@ -12,4 +12,6 @@ const (
 	GetAllRoom
 	PlayerRename
 	UpdateRoomAndPlayer
+	StartGame
+	AddNewChess
 )
