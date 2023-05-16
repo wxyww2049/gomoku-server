@@ -1,5 +1,9 @@
 package websocket
 
+/**
+websocket的基础函数和消息分发
+*/
+
 import (
 	"encoding/json"
 	"fmt"
@@ -15,9 +19,9 @@ import (
 )
 
 var (
-	m      *melody.Melody
-	logger *logrus.Logger
-	idMap  sync.Map
+	m      *melody.Melody //websocket的基础函数和消息分发
+	logger *logrus.Logger //打印日志
+	idMap  sync.Map       //用于映射pid和session，idMap[pid]指向id为pid的某个用户
 )
 
 func SendError(pid string, msg string) {
@@ -25,8 +29,9 @@ func SendError(pid string, msg string) {
 		Code: constants.Fail,
 		Data: msg,
 	})
-}
-func SendToRoomPlayer(room *po.Room) {
+} //返回错误信息
+
+func SendToRoomPlayer(room *po.Room) { //向房间内的玩家发送房间状态
 	log.Println("返回房间信息")
 	type reMsg struct {
 		Info *po.Player `json:"info"`
@@ -56,7 +61,23 @@ func SendToRoomPlayer(room *po.Room) {
 		send2Pid(room.Player.Id, msg)
 	}
 }
-func InitMelody() *melody.Melody {
+func sendInfoMsgToRoom(r *po.Room, sentence string) { //向房间内的玩家发送提示消息
+	if r.Owner != nil {
+		sendInfoMsg(r.Owner.Id, sentence)
+	}
+	if r.Player != nil {
+		sendInfoMsg(r.Player.Id, sentence)
+	}
+}
+func sendInfoMsg(pid string, rmsg string) { //向特定玩家发送提示消息
+	msg := &dto.Message{
+		Code: constants.InfoMsg,
+		Data: rmsg,
+	}
+	send2Pid(pid, msg)
+}
+
+func InitMelody() *melody.Melody { //初始化melody，设置消息处理函数
 	m = melody.New()
 	m.HandleMessage(Receive)
 	m.HandleConnect(Connect)
@@ -71,7 +92,7 @@ func send(s *melody.Session, msg *dto.Message) { //向特定的对话s发送消�
 	}
 }
 
-func Connect(s *melody.Session) {
+func Connect(s *melody.Session) { //用户连接时执行的函数，需要初始化用户信息
 	id := uuid.NewV4().String()
 	idMap.Store(id, s)
 	s.Set("Id", id)
@@ -89,7 +110,7 @@ func Connect(s *melody.Session) {
 	GetAllRooms()
 }
 
-func DisConnect(s *melody.Session) {
+func DisConnect(s *melody.Session) { //用户断开连接时执行的函数，需要退出目前所在的房间
 	id, ok := s.Get("Id")
 	fmt.Println(id, ok)
 	if ok == false {
@@ -108,7 +129,7 @@ func DisConnect(s *melody.Session) {
 	GetAllRooms()
 }
 
-func Receive(s *melody.Session, msgByte []byte) { //收到消息侯的分发
+func Receive(s *melody.Session, msgByte []byte) { //收到消息侯的分发，根据收到消息的code分发给不同的处理函数
 	msg := &dto.Message{}
 	err := json.Unmarshal(msgByte, msg)
 	if err != nil {
@@ -132,6 +153,10 @@ func Receive(s *melody.Session, msgByte []byte) { //收到消息侯的分发
 		StartGame(s, msg)
 	case constants.AddNewChess:
 		AddNewChess(s, msg)
+	case constants.AdmitDefeat:
+		AdmitDefeat(s, msg)
+	case constants.ChatMsg:
+		ReciveMsg(s, msg)
 	}
 }
 
@@ -142,7 +167,7 @@ func Broadcast(msg *dto.Message) { //向所有对话广播消息
 	}
 }
 
-func send2Pid(id string, msg *dto.Message) {
+func send2Pid(id string, msg *dto.Message) { //根据pid向玩家发送消息
 	ts, ok := idMap.Load(id)
 	if !ok {
 		panic("找不到该id")

@@ -1,5 +1,8 @@
 package service
 
+/**
+与房间有关的服务
+*/
 import (
 	"encoding/json"
 	"fmt"
@@ -9,18 +12,12 @@ import (
 	"log"
 )
 
-type RoomService struct{}
+type RoomService struct{} //声明类
 
-func (R *RoomService) CheckNumOfRoom(room *po.Room) int {
-	var ret = 0
-	if room.Owner != nil {
-		ret += 1
-	}
-	if room.Player != nil {
-		ret += 1
-	}
-	return ret
-}
+/*
+*
+根据id获取房间指针
+*/
 func (R *RoomService) GetRoomById(id string) *po.Room {
 	r, ok := maRoom[id]
 	if ok == false {
@@ -28,6 +25,25 @@ func (R *RoomService) GetRoomById(id string) *po.Room {
 	}
 	return r
 }
+
+/*
+*
+接收新消息
+*/
+func (R *RoomService) SendNewMsg(rid string, Msg *po.PlayerMsg) *po.Room {
+	r, ok := maRoom[rid]
+	if ok == false {
+		return nil
+	}
+
+	r.Msg = append(r.Msg, *Msg)
+	return r
+}
+
+/*
+*
+创建新房间
+*/
 func (R *RoomService) CreateNewRoom(playerId string, id string, msg *dto.Message) *po.Room {
 
 	pa := maPlayer[playerId]
@@ -60,6 +76,10 @@ func (R *RoomService) CreateNewRoom(playerId string, id string, msg *dto.Message
 	return r
 }
 
+/*
+*
+获取所有房间
+*/
 func (R *RoomService) GetAllRoom() []*po.Room {
 	return rooms
 }
@@ -77,44 +97,62 @@ func (R *RoomService) DelRoom(id string) {
 		}
 	}
 }
-func (R *RoomService) EnterRoom(playerId string, roomId string) *po.Room {
+
+/*
+*
+进入房间
+*/
+func (R *RoomService) EnterRoom(playerId string, roomId string) (*po.Room, string) {
 
 	r := maRoom[roomId]
 	pa := maPlayer[playerId]
 	pa.Color = 1 - r.Owner.Color
 	if r.Player != nil {
 		log.Println("房间已满")
-		return nil
+		return nil, ""
 	}
 	r.Player = pa
 	r.Status = 1
-	return r
+	return r, pa.Name + "进入了房间"
 }
-func (R *RoomService) ExitRoom(playerId string, roomId string) bool {
+
+/*
+*
+退出房间
+*/
+func (R *RoomService) ExitRoom(playerId string, roomId string) (bool, string) {
 	r := maRoom[roomId]
 	p := maPlayer[playerId]
 	log.Println("p is", *p)
+	sentence := p.Name + "离开了房间"
+	r.Msg = nil
+
 	if r.Owner.Id == p.Id {
 		if r.Player != nil {
 			r.Owner = r.Player
 			r.Player = nil
 			r.Status = 0
-			return true
+			return true, sentence
 		} else {
 			r.Owner = nil
 			log.Println("开始删除房间", roomId)
 			ExRoomService.DelRoom(roomId)
-			return true
+			return true, sentence
 		}
 	} else if r.Player.Id == p.Id {
 		r.Player = nil
 		r.Status = 0
-		return true
+		return true, sentence
 	} else {
 		log.Println("没有找到对应房间")
-		return false
+		return false, ""
 	}
 }
+
+/*
+*
+开始游戏
+*/
 func (R *RoomService) StartGame(roomId string) (*po.Room, bool) {
 	r := maRoom[roomId]
 	if r.Status == 1 {
@@ -133,6 +171,10 @@ func (R *RoomService) StartGame(roomId string) (*po.Room, bool) {
 	}
 }
 
+/*
+*
+把棋盘转化到二维数组上
+*/
 func ConvertToBoard(steps *[]po.Chess) ([15][15]int, int, int) {
 	var board [15][15]int
 	var x = 0
@@ -148,6 +190,11 @@ func ConvertToBoard(steps *[]po.Chess) ([15][15]int, int, int) {
 	}
 	return board, x, y
 }
+
+/*
+*
+下棋
+*/
 func (R *RoomService) AddNewChess(roomId string, msg *dto.Message) (*po.Room, int, *string) { //int 3为添加成功 0为出现错误 -1游戏结束白色方赢，1为游戏结束黑色方赢
 	r := maRoom[roomId]
 	var tchess po.Chess
@@ -190,4 +237,20 @@ func (R *RoomService) AddNewChess(roomId string, msg *dto.Message) (*po.Room, in
 
 	r.Color = 1 - r.Color
 	return r, 3, nil
+}
+
+/*
+*
+认输
+*/
+func (R *RoomService) AdmitDefeat(roomId string, pid string) (*po.Room, string) {
+	r := maRoom[roomId]
+	p := maPlayer[pid]
+	r.Winner = 1 - int(p.Color)
+	r.Status = 1
+	if p.Color == 0 {
+		return r, "白方认输"
+	} else {
+		return r, "黑方认输"
+	}
 }

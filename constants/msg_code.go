@@ -14,4 +14,7 @@ const (
 	UpdateRoomAndPlayer
 	StartGame
 	AddNewChess
+	AdmitDefeat
+	InfoMsg
+	ChatMsg
 )

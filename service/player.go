@@ -22,6 +22,7 @@ func (p PlayerService) Connect(id string, name string) (*po.Player, bool) {
 	players = append(players, &player)
 	return &player, true
 }
+
 func (p PlayerService) DisConnect(id string) bool {
 	_, ok := maPlayer[id]
 	if !ok {
@@ -38,6 +39,9 @@ func (p PlayerService) DisConnect(id string) bool {
 }
 func (p PlayerService) GetAllPlayers() []*po.Player {
 	return players
+}
+func (p PlayerService) GetPlayerById(id string) *po.Player {
+	return maPlayer[id]
 }
 func (p PlayerService) Rename(id string, msg *dto.Message) (*po.Player, bool) {
 	player, ok := maPlayer[id]
